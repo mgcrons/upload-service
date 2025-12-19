@@ -1,8 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import multer from 'multer';
-import logger from '../utils/logger';
+import { Request, Response, NextFunction } from "express";
+import multer from "multer";
+import logger from "../utils/logger";
 
-const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
@@ -17,23 +17,31 @@ export const fileFilter = (
 ) => {
   // Check MIME type
   if (!ACCEPTED_MIME_TYPES.includes(file.mimetype)) {
-    logger.warn('File upload rejected: invalid MIME type', {
+    logger.warn("File upload rejected: invalid MIME type", {
       mimetype: file.mimetype,
       filename: file.originalname,
     });
-    return cb(new Error(`Invalid file type. Only images (JPG, PNG) and PDF files are allowed.`));
+    return cb(
+      new Error(
+        `Invalid file type. Only images (JPG, PNG) and PDF files are allowed.`
+      )
+    );
   }
 
   // Check file extension
-  const ext = file.originalname.toLowerCase().split('.').pop();
-  const validExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
-  
+  const ext = file.originalname.toLowerCase().split(".").pop();
+  const validExtensions = ["jpg", "jpeg", "png", "pdf"];
+
   if (!ext || !validExtensions.includes(ext)) {
-    logger.warn('File upload rejected: invalid extension', {
+    logger.warn("File upload rejected: invalid extension", {
       extension: ext,
       filename: file.originalname,
     });
-    return cb(new Error(`Invalid file extension. Allowed: ${validExtensions.join(', ')}`));
+    return cb(
+      new Error(
+        `Invalid file extension. Allowed: ${validExtensions.join(", ")}`
+      )
+    );
   }
 
   cb(null, true);
@@ -50,22 +58,22 @@ export const validateFileMetadata = (
   if (!req.file) {
     return res.status(400).json({
       error: {
-        code: 'NO_FILE_UPLOADED',
-        message: 'No file was uploaded',
+        code: "NO_FILE_UPLOADED",
+        message: "No file was uploaded",
       },
     });
   }
 
   // Validate file size
   if (req.file.size > MAX_FILE_SIZE_BYTES) {
-    logger.warn('File upload rejected: size limit exceeded', {
+    logger.warn("File upload rejected: size limit exceeded", {
       size: req.file.size,
       limit: MAX_FILE_SIZE_BYTES,
       filename: req.file.originalname,
     });
     return res.status(400).json({
       error: {
-        code: 'FILE_TOO_LARGE',
+        code: "FILE_TOO_LARGE",
         message: `File size exceeds ${MAX_FILE_SIZE_MB}MB limit`,
         maxSize: MAX_FILE_SIZE_MB,
       },
@@ -78,8 +86,8 @@ export const validateFileMetadata = (
   if (!userId) {
     return res.status(400).json({
       error: {
-        code: 'MISSING_USER_ID',
-        message: 'userId is required',
+        code: "MISSING_USER_ID",
+        message: "userId is required",
       },
     });
   }
@@ -87,25 +95,27 @@ export const validateFileMetadata = (
   if (!documentType) {
     return res.status(400).json({
       error: {
-        code: 'MISSING_DOCUMENT_TYPE',
-        message: 'documentType is required',
+        code: "MISSING_DOCUMENT_TYPE",
+        message: "documentType is required",
       },
     });
   }
 
   const validDocumentTypes = [
-    'ID_CARD',
-    'PASSPORT',
-    'DRIVERS_LICENSE',
-    'PROOF_OF_ADDRESS',
-    'SELFIE',
+    "ID_CARD",
+    "PASSPORT",
+    "DRIVERS_LICENSE",
+    "PROOF_OF_ADDRESS",
+    "SELFIE",
   ];
 
   if (!validDocumentTypes.includes(documentType)) {
     return res.status(400).json({
       error: {
-        code: 'INVALID_DOCUMENT_TYPE',
-        message: `Invalid document type. Allowed: ${validDocumentTypes.join(', ')}`,
+        code: "INVALID_DOCUMENT_TYPE",
+        message: `Invalid document type. Allowed: ${validDocumentTypes.join(
+          ", "
+        )}`,
       },
     });
   }
@@ -117,22 +127,22 @@ export const validateFileMetadata = (
  * Error handler for multer errors
  */
 export const handleMulterError = (
-  err: any,
+  err: unknown,
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   if (err instanceof multer.MulterError) {
-    logger.error('Multer error during file upload', {
+    logger.error("Multer error during file upload", {
       code: err.code,
       message: err.message,
       field: err.field,
     });
 
-    if (err.code === 'LIMIT_FILE_SIZE') {
+    if (err.code === "LIMIT_FILE_SIZE") {
       return res.status(400).json({
         error: {
-          code: 'FILE_TOO_LARGE',
+          code: "FILE_TOO_LARGE",
           message: `File size exceeds ${MAX_FILE_SIZE_MB}MB limit`,
         },
       });
@@ -140,7 +150,7 @@ export const handleMulterError = (
 
     return res.status(400).json({
       error: {
-        code: 'UPLOAD_ERROR',
+        code: "UPLOAD_ERROR",
         message: err.message,
       },
     });
