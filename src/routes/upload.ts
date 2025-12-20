@@ -64,6 +64,18 @@ router.post(
         error: error instanceof Error ? error.message : String(error),
       });
 
+      // Check if it's our custom AppError with specific status code
+      const { AppError } = await import("../utils/errors");
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({
+          error: {
+            code: error.code,
+            message: error.message,
+          },
+        });
+      }
+
+      // Unknown error - return 500
       res.status(500).json({
         error: {
           code: "UPLOAD_FAILED",
@@ -127,6 +139,19 @@ router.get(
       logger.error("Error serving file", {
         error: error instanceof Error ? error.message : String(error),
       });
+
+      // Check if it's our custom AppError with specific status code
+      const { AppError } = await import("../utils/errors");
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({
+          error: {
+            code: error.code,
+            message: error.message,
+          },
+        });
+      }
+
+      // Unknown error - return 500
       res.status(500).json({
         error: {
           code: "FILE_SERVE_ERROR",
@@ -164,6 +189,18 @@ router.delete(
         error: error instanceof Error ? error.message : String(error),
       });
 
+      // Check if it's our custom AppError with specific status code
+      const { AppError } = await import("../utils/errors");
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({
+          error: {
+            code: error.code,
+            message: error.message,
+          },
+        });
+      }
+
+      // Unknown error - return 500
       res.status(500).json({
         error: {
           code: "DELETE_FAILED",
