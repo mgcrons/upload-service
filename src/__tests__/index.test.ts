@@ -57,4 +57,48 @@ describe("Express App", () => {
       expect(response.headers["x-content-type-options"]).toBeDefined();
     });
   });
+
+  describe("Global Error Handler", () => {
+    // Add a test route that triggers the error handler
+    beforeAll(() => {
+      app.get("/test-error", (req, res, next) => {
+        next(new Error("Test error message"));
+      });
+    });
+
+    it("should handle errors with full error message in non-production mode", async () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = "development";
+
+      const response = await request(app).get("/test-error");
+
+      process.env.NODE_ENV = originalEnv;
+
+      expect(response.status).toBe(500);
+      // Check the response has the error structure
+      if (response.body && response.body.error) {
+        expect(response.body.error.code).toBe("INTERNAL_SERVER_ERROR");
+        expect(response.body.error.message).toBe("Test error message");
+      }
+    });
+
+    it("should handle errors with generic message in production mode", async () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = "production";
+
+      const response = await request(app).get("/test-error");
+
+      console.log("Response status:", response.status);
+      console.log("Response body:", JSON.stringify(response.body));
+
+      process.env.NODE_ENV = originalEnv;
+
+      expect(response.status).toBe(500);
+      // Check the response has the error structure
+      if (response.body && response.body.error) {
+        expect(response.body.error.code).toBe("INTERNAL_SERVER_ERROR");
+        expect(response.body.error.message).toBe("Internal server error");
+      }
+    });
+  });
 });

@@ -185,6 +185,33 @@ describe("LocalStorageManager", () => {
       expect(fs.existsSync(metadata.path)).toBe(true);
     });
 
+    it("should handle non-Error Redis exceptions gracefully during store", async () => {
+      mockRedisClient.isReady = true;
+      // Throw a string instead of an Error
+      mockHSet.mockRejectedValue("Redis string error");
+
+      const mockFile = {
+        path: "/tmp/test-redis-string-error.jpg",
+        originalname: "string-error.jpg",
+        size: 512,
+        mimetype: "image/jpeg",
+      } as Express.Multer.File;
+
+      fs.mkdirSync(path.dirname(mockFile.path), { recursive: true });
+      fs.writeFileSync(mockFile.path, "string error test");
+
+      // Should NOT throw, should handle gracefully
+      const metadata = await storageManager.storeFile(
+        mockFile,
+        testUserId,
+        testDocType
+      );
+
+      // File should still be uploaded
+      expect(metadata).toBeDefined();
+      expect(fs.existsSync(metadata.path)).toBe(true);
+    });
+
     it("should create directory structure if it doesn't exist", async () => {
       const mockFile = {
         path: "/tmp/test-mkdir.jpg",
@@ -258,6 +285,28 @@ describe("LocalStorageManager", () => {
         .update(fileContent)
         .digest("hex");
       expect(metadata.hash).toBe(expectedHash);
+    });
+
+    it("should handle non-Error exceptions when storing files", async () => {
+      const mockFile = {
+        path: "/tmp/test-string-error.jpg",
+        originalname: "error.jpg",
+        size: 100,
+        mimetype: "image/jpeg",
+      } as Express.Multer.File;
+
+      // Mock fs.renameSync to throw a string instead of an Error
+      const originalRenameSync = fs.renameSync;
+      jest.spyOn(fs, "renameSync").mockImplementation(() => {
+        throw "String error instead of Error object";
+      });
+
+      await expect(
+        storageManager.storeFile(mockFile, testUserId, testDocType)
+      ).rejects.toEqual("String error instead of Error object");
+
+      // Restore original implementation
+      jest.spyOn(fs, "renameSync").mockImplementation(originalRenameSync);
     });
   });
 
@@ -385,6 +434,49 @@ describe("LocalStorageManager", () => {
 
       // Filesystem deletion should still succeed
       expect(fs.existsSync(testFile)).toBe(false);
+    });
+
+    it("should handle non-Error Redis exceptions during deletion", async () => {
+      mockRedisClient.isReady = true;
+      // Throw a string instead of an Error
+      mockDel.mockRejectedValue("Redis delete string error");
+
+      const testDir = path.join(testUploadDir, testUserId, testDocType);
+      fs.mkdirSync(testDir, { recursive: true });
+      const testFile = path.join(testDir, "string-error-delete.jpg");
+      fs.writeFileSync(testFile, "string error");
+
+      // Should not throw
+      await expect(
+        storageManager.deleteFile(
+          testUserId,
+          testDocType,
+          "string-error-delete.jpg"
+        )
+      ).resolves.not.toThrow();
+
+      // Filesystem deletion should still succeed
+      expect(fs.existsSync(testFile)).toBe(false);
+    });
+
+    it("should handle non-Error exceptions when deleting files", async () => {
+      const testDir = path.join(testUploadDir, testUserId, testDocType);
+      fs.mkdirSync(testDir, { recursive: true });
+      const testFile = path.join(testDir, "error-delete.jpg");
+      fs.writeFileSync(testFile, "error");
+
+      // Mock fs.unlinkSync to throw a string instead of an Error
+      const originalUnlinkSync = fs.unlinkSync;
+      jest.spyOn(fs, "unlinkSync").mockImplementation(() => {
+        throw "String error in delete";
+      });
+
+      await expect(
+        storageManager.deleteFile(testUserId, testDocType, "error-delete.jpg")
+      ).rejects.toEqual("String error in delete");
+
+      // Restore original implementation
+      jest.spyOn(fs, "unlinkSync").mockImplementation(originalUnlinkSync);
     });
   });
 
