@@ -223,6 +223,29 @@ describe("Upload Routes", () => {
       expect(response.status).toBe(500);
       expect(response.body.error.code).toBe("FILE_SERVE_ERROR");
     });
+
+    it("should handle fileExists throwing an error", async () => {
+      mockFileExists.mockRejectedValue(new Error("Database error"));
+
+      const response = await request(app).get(
+        "/files/user123/ID_CARD/error-file.jpg"
+      );
+
+      expect(response.status).toBe(500);
+      expect(response.body.error.code).toBe("FILE_SERVE_ERROR");
+    });
+
+    it("should handle non-Error exceptions in GET endpoint", async () => {
+      // Throw a string instead of an Error to test the instanceof check
+      mockFileExists.mockRejectedValue("String error in fileExists");
+
+      const response = await request(app).get(
+        "/files/user123/ID_CARD/string-error.jpg"
+      );
+
+      expect(response.status).toBe(500);
+      expect(response.body.error.code).toBe("FILE_SERVE_ERROR");
+    });
   });
 
   describe("DELETE /files/:userId/:documentType/:filename", () => {
