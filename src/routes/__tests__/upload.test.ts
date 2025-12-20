@@ -23,10 +23,12 @@ jest.mock("../../storage/localStorage", () => ({
 
 // Mock logger
 jest.mock("../../utils/logger", () => ({
+  __esModule: true,
   default: {
     info: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 
@@ -201,6 +203,25 @@ describe("Upload Routes", () => {
 
       expect(response.status).toBe(404);
       expect(response.body.error.code).toBe("FILE_NOT_FOUND");
+    });
+
+    it("should handle sendFile errors", async () => {
+      // Create a file path that will cause sendFile to fail
+      const invalidPath = path.join(
+        testUploadDir,
+        "invalid/../../../etc/passwd"
+      );
+
+      mockFileExists.mockResolvedValue(true);
+      mockGetFilePath.mockReturnValue(invalidPath);
+
+      const response = await request(app).get(
+        "/files/user123/ID_CARD/malicious.jpg"
+      );
+
+      // Should return 500 if sendFile fails
+      expect(response.status).toBe(500);
+      expect(response.body.error.code).toBe("FILE_SERVE_ERROR");
     });
   });
 

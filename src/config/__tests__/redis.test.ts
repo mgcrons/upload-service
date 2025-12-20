@@ -1,10 +1,10 @@
 import { REDIS_KEYS } from "../redis";
 
-// Mock the actual Redis client to prevent real connections
+// Mock redis module BEFORE importing redis.ts
 jest.mock("redis", () => ({
   createClient: jest.fn(() => ({
     on: jest.fn(),
-    connect: jest.fn().mockResolvedValue(undefined),
+    connect: jest.fn(),
     isReady: false,
   })),
 }));
@@ -47,12 +47,39 @@ describe("Redis Configuration", () => {
         "file:user-with-dashes:PROOF_OF_ADDRESS:file_name_with_underscores.pdf"
       );
     });
+
+    it("should generate keys with complex user IDs", () => {
+      const key = REDIS_KEYS.FILE_METADATA(
+        "user_123-abc",
+        "BANK_STATEMENT",
+        "file-2024.pdf"
+      );
+
+      expect(key).toBe("file:user_123-abc:BANK_STATEMENT:file-2024.pdf");
+    });
+
+    it("should generate list keys for different document types", () => {
+      const idCardKey = REDIS_KEYS.FILE_LIST("user1", "ID_CARD");
+      const passportKey = REDIS_KEYS.FILE_LIST("user1", "PASSPORT");
+
+      expect(idCardKey).toBe("files:user1:ID_CARD");
+      expect(passportKey).toBe("files:user1:PASSPORT");
+      expect(idCardKey).not.toBe(passportKey);
+    });
   });
 
-  describe("connectRedis", () => {
-    it("should use correct Redis URL from environment", () => {
-      const expectedUrl = process.env.REDIS_URL || "redis://localhost:6379/2";
-      expect(expectedUrl).toBeDefined();
+  describe("connectRedis function", () => {
+    it("should be exported from the module", () => {
+      const { connectRedis } = require("../redis");
+      expect(connectRedis).toBeDefined();
+      expect(typeof connectRedis).toBe("function");
+    });
+  });
+
+  describe("Redis URL configuration", () => {
+    it("should use REDIS_URL environment variable if set", () => {
+      // The module uses process.env.REDIS_URL which is set in .env
+      expect(process.env.REDIS_URL).toBeDefined();
     });
   });
 });

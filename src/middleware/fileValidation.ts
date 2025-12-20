@@ -156,5 +156,19 @@ export const handleMulterError = (
     });
   }
 
+  // Handle file filter errors (non-Multer errors)
+  if (err instanceof Error) {
+    logger.warn("File validation error", {
+      message: err.message,
+    });
+
+    return res.status(400).json({
+      error: {
+        code: "INVALID_FILE",
+        message: err.message,
+      },
+    });
+  }
+
   next(err);
 };

@@ -319,18 +319,27 @@ describe("fileValidation middleware", () => {
       expect(mockNext).not.toHaveBeenCalled();
     });
 
-    it("should pass non-multer errors to next middleware", () => {
-      const regularError = new Error("Some other error");
+    it("should handle file filter errors as validation errors", () => {
+      const fileFilterError = new Error(
+        "Invalid file type. Only images (JPG, PNG) and PDF files are allowed."
+      );
 
       handleMulterError(
-        regularError,
+        fileFilterError,
         mockReq as Request,
         mockRes as Response,
         mockNext
       );
 
-      expect(mockNext).toHaveBeenCalledWith(regularError);
-      expect(mockRes.status).not.toHaveBeenCalled();
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: {
+          code: "INVALID_FILE",
+          message:
+            "Invalid file type. Only images (JPG, PNG) and PDF files are allowed.",
+        },
+      });
+      expect(mockNext).not.toHaveBeenCalled();
     });
   });
 });
