@@ -99,7 +99,18 @@ export class LocalStorageManager {
       const filePath = path.join(storagePath, filename);
 
       // Move file to permanent location
-      fs.renameSync(file.path, filePath);
+      // Use copy + unlink instead of rename to support cross-filesystem moves
+      // (e.g., from /tmp to mounted volume in Docker/Coolify)
+      try {
+        fs.copyFileSync(file.path, filePath);
+        fs.unlinkSync(file.path);
+      } catch (moveError) {
+        // Clean up destination file if copy succeeded but unlink failed
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        throw moveError;
+      }
 
       // Calculate file hash
       const hash = this.calculateFileHash(filePath);
@@ -175,7 +186,10 @@ export class LocalStorageManager {
         documentType,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw error;
+
+      // Convert to appropriate AppError
+      const { handleFileSystemError } = await import("../utils/errors");
+      throw handleFileSystemError(error, "storing file");
     }
   }
 
@@ -288,7 +302,10 @@ export class LocalStorageManager {
         filename,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw error;
+
+      // Convert to appropriate AppError
+      const { handleFileSystemError } = await import("../utils/errors");
+      throw handleFileSystemError(error, "deleting file");
     }
   }
 

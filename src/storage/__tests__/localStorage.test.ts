@@ -295,18 +295,19 @@ describe("LocalStorageManager", () => {
         mimetype: "image/jpeg",
       } as Express.Multer.File;
 
-      // Mock fs.renameSync to throw a string instead of an Error
-      const originalRenameSync = fs.renameSync;
-      jest.spyOn(fs, "renameSync").mockImplementation(() => {
+      // Mock fs.copyFileSync to throw a string instead of an Error
+      const originalCopyFileSync = fs.copyFileSync;
+      jest.spyOn(fs, "copyFileSync").mockImplementation(() => {
         throw "String error instead of Error object";
       });
 
+      // Should throw a StorageError wrapping the string error
       await expect(
         storageManager.storeFile(mockFile, testUserId, testDocType)
-      ).rejects.toEqual("String error instead of Error object");
+      ).rejects.toThrow("Unknown error during storing file");
 
       // Restore original implementation
-      jest.spyOn(fs, "renameSync").mockImplementation(originalRenameSync);
+      jest.spyOn(fs, "copyFileSync").mockImplementation(originalCopyFileSync);
     });
   });
 
@@ -471,9 +472,10 @@ describe("LocalStorageManager", () => {
         throw "String error in delete";
       });
 
+      // Should throw a StorageError wrapping the string error
       await expect(
         storageManager.deleteFile(testUserId, testDocType, "error-delete.jpg")
-      ).rejects.toEqual("String error in delete");
+      ).rejects.toThrow("Unknown error during deleting file");
 
       // Restore original implementation
       jest.spyOn(fs, "unlinkSync").mockImplementation(originalUnlinkSync);
