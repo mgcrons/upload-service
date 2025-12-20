@@ -5,8 +5,13 @@ import crypto from "crypto";
 import logger from "../utils/logger";
 import { redisClient, REDIS_KEYS } from "../config/redis";
 
-const UPLOAD_BASE_DIR =
-  process.env.UPLOAD_DIR || path.join(__dirname, "../../uploads");
+// Ensure UPLOAD_BASE_DIR is always an absolute path
+// This is critical for:
+// 1. res.sendFile() which requires absolute paths
+// 2. Coolify persistent storage mapping (must map to absolute path in container)
+const UPLOAD_BASE_DIR = path.resolve(
+  process.env.UPLOAD_DIR || path.join(__dirname, "../../uploads")
+);
 
 export interface FileMetadata {
   filename: string;
@@ -30,6 +35,20 @@ export class LocalStorageManager {
     if (!fs.existsSync(dirPath)) {
       fs.mkdirSync(dirPath, { recursive: true });
       logger.info("Created directory", { path: dirPath });
+    }
+  }
+
+  /**
+   * Log upload configuration (called once on first file operation)
+   */
+  private static configLogged = false;
+  private logUploadConfig(): void {
+    if (!LocalStorageManager.configLogged) {
+      logger.info("Upload storage configuration", {
+        uploadBaseDir: UPLOAD_BASE_DIR,
+        isAbsolute: path.isAbsolute(UPLOAD_BASE_DIR),
+      });
+      LocalStorageManager.configLogged = true;
     }
   }
 
@@ -68,6 +87,9 @@ export class LocalStorageManager {
     documentType: string
   ): Promise<FileMetadata> {
     try {
+      // Log configuration once
+      this.logUploadConfig();
+
       // Create directory structure
       const storagePath = this.getStoragePath(userId, documentType);
       this.ensureDirectoryExists(storagePath);
